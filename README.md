@@ -1,25 +1,29 @@
 # mis-security
 
-> Transversal security microservice: identity, sign-in and JWT issuing (Annex J)
+Seguridad transversal de MediStock (Medicine Inventory System), Grupo 1. Documentacion central en [mis-docs](https://github.com/code-corhuila/mis-docs).
 
-Part of the **Medicine Inventory System** distributed system — team `medicine-inventory-system`, Grupo 1.
-Governance and documentation live in [`mis-docs`](https://github.com/code-corhuila/mis-docs).
+## HU-SEC-001 - Primera entrega
 
-## Branching
+Este PR prepara bibliotecas compilables, no un servicio ejecutable. La aplicacion Spring Boot, la composicion Docker y Postman se incorporan en el siguiente PR. No intentar arrancar esta entrega con spring-boot:run.
 
-Three permanent branches. **None of them accepts a direct commit** — you enter through a child
-branch and leave through a Pull Request.
+- security-core: cuentas, puertos y autenticacion sin dependencias de Spring.
+- security-adapters: persistencia JDBC, JWT RS256, contratos HTTP y errores correlacionados.
+- Pruebas: credenciales, cuentas inactivas, claims y firmas invalidas, cuatro roles y claves publicas JWKS.
 
+Requiere Java 17 y Maven, o Docker Desktop con contenedores Linux:
+
+```powershell
+mvn -B verify
+# Alternativa sin instalar Java ni Maven:
+docker run --rm --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /workspace maven:3.9.9-eclipse-temurin-17 mvn -B verify
 ```
-develop  <--PR--  feat/... fix/... chore/...
-qa       <--PR--  qa/...
-main     <--PR--  release/...  hotfix/...
-```
 
-Promotion happens **by re-application** (`git cherry-pick -x`), never by merging one permanent
-branch into another: `merge develop -> qa` and `merge qa -> main` do not exist in this model.
+No necesita una base de datos para estas pruebas unitarias. La persistencia y los permisos de escritura de las APIs de dominio no se validan con esta entrega.
 
-`main` requires **1 approval from `ariel5253`**. On `develop` and `qa` the team sets its own review
-rule.
+## Publicacion y configuracion
 
-Full policy: `00-governance/branching-policy.md` in `mis-docs`.
+Rama hu-sec-001-foundation-dev y PR hacia develop dentro de code-corhuila/mis-security. Promocion a QA mediante cherry-pick -x; main requiere aprobacion del docente. No fusionar ramas permanentes entre si ni modificar CODEOWNERS.
+
+CI solo en PR hacia develop/qa, con cancelacion y limite de 10 minutos. No versionar env/*.env, secrets/ ni target/. Las claves y credenciales locales de la implementacion completa permanecen ignoradas y no forman parte de este PR.
+
+La implementacion completa se conserva en hu-sec-001-dev; no usar esa rama para un PR conjunto que exceda el limite de lineas. El segundo PR se preparara desde develop despues de integrar el primero.
