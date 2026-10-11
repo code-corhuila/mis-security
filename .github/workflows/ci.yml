@@ -20,6 +20,9 @@ jobs:
           cache: maven
       - name: Compile and test independent modules
         run: mvn -B verify
+      - name: Verify local service issuer with synthetic keys
+        shell: pwsh
+        run: ./tests/Test-WorkflowIssuer.ps1
       - name: Verify explicit environment key paths
         run: |
           python3 -m pip install --disable-pip-version-check -r tests/requirements.txt
