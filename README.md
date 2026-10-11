@@ -1,29 +1,63 @@
 # mis-security
 
-Seguridad transversal de MediStock (Medicine Inventory System), Grupo 1. Documentacion central en [mis-docs](https://github.com/code-corhuila/mis-docs).
+Servicio de identidad de MediStock (Medicine Inventory System), HU-SEC-001. Java 17 y Spring Boot 4.0.3. PostgreSQL real, bcrypt y JWT RS256 de una hora. No hay registro publico, refresh tokens ni administracion web de usuarios en esta fase.
 
-## HU-SEC-001 - Primera entrega
+## Arquitectura
 
-Este PR prepara bibliotecas compilables, no un servicio ejecutable. La aplicacion Spring Boot, la composicion Docker y Postman se incorporan en el siguiente PR. No intentar arrancar esta entrega con spring-boot:run.
+Tres modulos Maven: security-core contiene modelo y puertos sin Spring; security-adapters implementa JDBC, JWT y HTTP; security-app compone los componentes. JDBC se utiliza para identidad por sus consultas y transacciones pequeñas; JPA sigue previsto para Catalogo e Inventario.
 
-- security-core: cuentas, puertos y autenticacion sin dependencias de Spring.
-- security-adapters: persistencia JDBC, JWT RS256, contratos HTTP y errores correlacionados.
-- Pruebas: credenciales, cuentas inactivas, claims y firmas invalidas, cuatro roles y claves publicas JWKS.
+Las migraciones no viven aqui: estan en la carpeta local mis-security-db, cuyo repositorio oficial debe confirmar el docente. La composicion raiz esta en mis-infra-postgres. No modificar CODEOWNERS.
 
-Requiere Java 17 y Maven, o Docker Desktop con contenedores Linux:
+## Ejecutar y probar
+
+Requiere Docker Desktop, PowerShell 7 y las carpetas hermanas mis-infra-postgres, mis-infra-mongo y mis-security-db. Desde mis-infra-postgres:
 
 ```powershell
-mvn -B verify
-# Alternativa sin instalar Java ni Maven:
-docker run --rm --mount "type=bind,source=$($PWD.Path),target=/workspace" -w /workspace maven:3.9.9-eclipse-temurin-17 mvn -B verify
+pwsh -NoProfile -File .\scripts\Start-Security.ps1
+pwsh -NoProfile -File .\scripts\Test-Security.ps1
+pwsh -NoProfile -File .\scripts\Test-SecurityMigrations.ps1
 ```
 
-No necesita una base de datos para estas pruebas unitarias. La persistencia y los permisos de escritura de las APIs de dominio no se validan con esta entrega.
+Start-Security genera claves RSA y passwords aleatorios solo si no existen, migra el esquema y arranca el contenedor. Conserva cuentas y contrasenas existentes. No reemplaza configuracion parcial. Las claves estan en secrets/ y los passwords en env/dev.env, ignorados por Git.
 
-## Publicacion y configuracion
+## Endpoints iniciales
 
-Rama hu-sec-001-foundation-dev y PR hacia develop dentro de code-corhuila/mis-security. Promocion a QA mediante cherry-pick -x; main requiere aprobacion del docente. No fusionar ramas permanentes entre si ni modificar CODEOWNERS.
+Acceso temporal de diagnostico: http://localhost:58081. Solo se publica con compose.dev.yml; la composicion base no expone la API. Los clientes finales usaran el gateway cuando se implemente.
 
-CI solo en PR hacia develop/qa, con cancelacion y limite de 10 minutos. No versionar env/*.env, secrets/ ni target/. Las claves y credenciales locales de la implementacion completa permanecen ignoradas y no forman parte de este PR.
+| Metodo | Ruta | Acceso |
+| --- | --- | --- |
+| GET | /health | Publico; 200 si PostgreSQL responde |
+| POST | /api/v1/auth/login | Credenciales validas de una cuenta activa |
+| GET | /api/v1/auth/me | JWT valido y cuenta activa |
+| GET | /api/v1/auth/jwks | Solo claves publicas |
 
-La implementacion completa se conserva en hu-sec-001-dev; no usar esa rama para un PR conjunto que exceda el limite de lineas. El segundo PR se preparara desde develop despues de integrar el primero.
+Importar postman/security.postman_collection.json. Configurar password localmente desde env/dev.env; la coleccion versionada mantiene password y token vacios. Login guarda accessToken para la siguiente consulta.
+
+| Usuario inicial | Rol | Variable de password local |
+| --- | --- | --- |
+| admin | ADMIN | BOOTSTRAP_ADMIN_PASSWORD |
+| inventario | INVENTORY | BOOTSTRAP_INVENTORY_PASSWORD |
+| supervisor | SUPERVISOR | BOOTSTRAP_SUPERVISOR_PASSWORD |
+| consulta | CONSULTATION | BOOTSTRAP_CONSULTATION_PASSWORD |
+
+No se usa 1234 ni se almacenan passwords de cuentas en semillas SQL. Bootstrap es idempotente y no reactiva cuentas ni cambia roles/passwords existentes. SECURITY_BOOTSTRAP_ENABLED=false lo desactiva; QA/main requieren aprovisionamiento y claves propias, sin copiar secretos de develop.
+
+## Contrato y limites
+
+Cada JWT lleva sub UUID, iss=mis-security, aud=mis-api, exp, iat, kid y roles conocidos. Se valida firma RS256, expiracion con tolerancia 30 segundos y claims obligatorios. HS256 y tokens sin firma se rechazan. JWKS no publica datos privados; X-User-Role no concede permisos.
+
+Las autoridades ROLE_ se derivan del JWT, con manejadores 401/403. Los endpoints actuales son de autenticacion y consulta propia, disponibles para los cuatro roles; las restricciones de escritura de Catalogo/Inventario/Proveedores se integraran y probaran al implementar esas APIs.
+
+Errores contienen error, message y traceId; la cabecera X-Correlation-Id se conserva o se genera de forma segura. Se rechazan campos JSON desconocidos y cuerpos mayores de 64 KiB. Password no se recorta y no supera 72 bytes UTF-8. Username se normaliza a minusculas sin espacios exteriores.
+
+Pool maximo 10, espera 2 segundos y consultas/socket 5 segundos. Registros JSON correlacionados sin tokens o passwords. Logout del cliente borra su token, no revoca el JWT del servidor. Una desactivacion se verifica en login y me; otras APIs validaran tokens hasta expiracion, segun contrato.
+
+## Validacion y publicacion
+
+Validado localmente el 2026-10-10: 10 pruebas del nucleo/JWT sin fallos; Test-Security paso contra PostgreSQL real con cuatro roles, credenciales invalidas, cuenta inactiva, JWT invalido/vencido, JSON, UTF-8, correlacion, tamaño y persistencia de identidad tras reinicio. Las seis migraciones pasaron creacion, reejecucion sin cambios, rollback total y reconstruccion en una base desechable; no se revirtio develop.
+
+CI compila y ejecuta pruebas en PR a develop/qa, con cancelacion y limite de 10 minutos. El primer PR paso su comprobacion en GitHub; el CI de esta segunda entrega se ejecutara al abrir su PR. El contenedor se ejecuta como usuario sin privilegios.
+
+Rama hu-sec-001-runtime-dev desde develop, despues de integrar hu-sec-001-foundation-dev. Este segundo PR agrega la aplicacion ejecutable, Docker, Postman y esta guia; no vuelve a incluir el nucleo ni los adaptadores ya fusionados. Destino develop; promocion a QA con cherry-pick -x y main con aprobacion del docente. No modificar CODEOWNERS ni realizar commits directos a ramas permanentes.
+
+Documentacion central: [mis-docs](https://github.com/code-corhuila/mis-docs).

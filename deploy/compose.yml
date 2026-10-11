@@ -1,0 +1,30 @@
+services:
+  security:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      SECURITY_DB_URL: jdbc:postgresql://postgres:5432/${PG_DATABASE:?PG_DATABASE required}
+      SECURITY_APP_PASSWORD: ${SECURITY_APP_PASSWORD:?SECURITY_APP_PASSWORD required}
+      SECURITY_PRIVATE_KEY: /run/keys/private.pem
+      SECURITY_PUBLIC_KEY: /run/keys/public.pem
+      SECURITY_KEY_ID: ${SECURITY_KEY_ID:?SECURITY_KEY_ID required}
+      BOOTSTRAP_ENABLED: ${SECURITY_BOOTSTRAP_ENABLED:?SECURITY_BOOTSTRAP_ENABLED required}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_INVENTORY_PASSWORD: ${BOOTSTRAP_INVENTORY_PASSWORD:-}
+      BOOTSTRAP_SUPERVISOR_PASSWORD: ${BOOTSTRAP_SUPERVISOR_PASSWORD:-}
+      BOOTSTRAP_CONSULTATION_PASSWORD: ${BOOTSTRAP_CONSULTATION_PASSWORD:-}
+    volumes:
+      - ../secrets:/run/keys:ro
+    depends_on:
+      security-db-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+    stop_grace_period: 20s
+    networks: [platform]
