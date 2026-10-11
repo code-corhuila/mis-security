@@ -21,4 +21,7 @@ jobs:
       - name: Compile and test independent modules
         run: mvn -B verify
       - name: Verify explicit environment key paths
-        run: python3 tests/check_key_paths.py
+        run: |
+          python3 -m pip install --disable-pip-version-check -r tests/requirements.txt
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          python3 tests/check_key_paths.py
