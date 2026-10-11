@@ -20,3 +20,5 @@ jobs:
           cache: maven
       - name: Compile and test independent modules
         run: mvn -B verify
+      - name: Verify explicit environment key paths
+        run: python3 tests/check_key_paths.py
