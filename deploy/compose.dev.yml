@@ -1,0 +1,4 @@
+services:
+  security:
+    ports:
+      - "127.0.0.1:${SECURITY_HOST_PORT:?SECURITY_HOST_PORT required}:8080"
