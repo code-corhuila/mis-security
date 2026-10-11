@@ -15,7 +15,12 @@ services:
       BOOTSTRAP_SUPERVISOR_PASSWORD: ${BOOTSTRAP_SUPERVISOR_PASSWORD:-}
       BOOTSTRAP_CONSULTATION_PASSWORD: ${BOOTSTRAP_CONSULTATION_PASSWORD:-}
     volumes:
-      - ../secrets:/run/keys:ro
+      - type: bind
+        source: ${SECURITY_KEYS_PATH:?SECURITY_KEYS_PATH must be set explicitly}
+        target: /run/keys
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       security-db-migrate:
         condition: service_completed_successfully

@@ -61,3 +61,19 @@ CI compila y ejecuta pruebas en PR a develop/qa, con cancelacion y limite de 10 
 Rama hu-sec-001-runtime-dev desde develop, despues de integrar hu-sec-001-foundation-dev. Este segundo PR agrega la aplicacion ejecutable, Docker, Postman y esta guia; no vuelve a incluir el nucleo ni los adaptadores ya fusionados. Destino develop; promocion a QA con cherry-pick -x y main con aprobacion del docente. No modificar CODEOWNERS ni realizar commits directos a ramas permanentes.
 
 Documentacion central: [mis-docs](https://github.com/code-corhuila/mis-docs).
+
+## Claves RSA por ambiente
+
+SECURITY_KEYS_PATH es obligatorio, incluso en dev. No tiene fallback: ausente o vacio detiene Compose. El montaje es de solo lectura y create_host_path=false impide crear silenciosamente una carpeta de claves inexistente. Las rutas se resuelven respecto de deploy/compose.yml.
+
+| Archivo local ignorado | Plantilla versionada | Directorio de claves |
+| --- | --- | --- |
+| env/dev.env | env/dev.env.example | ../secrets |
+| env/qa.env | env/qa.env.example | ../secrets/qa |
+| env/main.env | env/main.env.example | ../secrets/main |
+
+No copiar claves dev a QA/main. Las plantillas no contienen credenciales y no se usan directamente para arrancar con bootstrap habilitado. El generador scripts/New-Environment.ps1 de mis-infra-postgres crea los archivos reales QA/main y pares RSA independientes. Start-Security genera la ruta dev explicitamente; Set-DevSecurityKeyPath agrega solo esa ruta si falta en una instalacion anterior, sin regenerar claves ni passwords.
+
+Desde mis-infra-postgres, tests/Test-SecurityKeyPaths.ps1 verifica configuracion y rechazo de variable ausente/vacia en los tres ambientes. tests/Test-Environments.ps1 -Runtime verifica arranque, rechazo de tokens entre ambientes y recuperacion de QA. Estas pruebas son locales, no promocion formal ni evidencia de CI de este PR.
+
+CI tambien ejecuta tests/check_key_paths.py sobre las tres plantillas con valores sinteticos. Solo valida modelos y rechazo de configuracion incompleta: no descarga motores, no usa claves reales y no acredita arranque de QA/main. Su ejecucion en GitHub se confirma despues del push; la comprobacion local utiliza el mismo script.
