@@ -2,9 +2,13 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import yaml
+from key_mount_policy import validate_key_mount
 
 
 root = Path(__file__).resolve().parents[1]
+source = yaml.safe_load((root / "deploy/compose.yml").read_text(encoding="utf-8"))
+source_mount = next(v for v in source["services"]["security"]["volumes"] if v["target"] == "/run/keys")
 base = ["docker", "compose", "-f", str(root / "tests/compose.keypaths.yml")]
 environment = os.environ.copy()
 environment.update(PG_DATABASE="ci_only", SECURITY_APP_PASSWORD="ci-only-not-a-secret",
@@ -20,7 +24,7 @@ for name in ("dev", "qa", "main"):
     if name != "dev":
         expected = expected / name
     assert Path(mount["source"]).resolve() == expected.resolve(), "Ruta incorrecta: " + name
-    assert mount["read_only"] and mount["bind"]["create_host_path"] is False, "Montaje inseguro."
+    validate_key_mount(source_mount, mount)
     empty = environment | {"SECURITY_KEYS_PATH": ""}
     result = subprocess.run(args + ["config", "--quiet"], env=empty, capture_output=True, text=True)
     assert result.returncode != 0, "Ruta vacia aceptada: " + name
