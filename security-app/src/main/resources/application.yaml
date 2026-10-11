@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: mis-security
+  datasource:
+    url: ${SECURITY_DB_URL}
+    username: security_app
+    password: ${SECURITY_APP_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 2000
+      initialization-fail-timeout: 10000
+      data-source-properties:
+        socketTimeout: 5
+        options: "-c statement_timeout=5000"
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+server:
+  port: 8080
+  shutdown: graceful
+  tomcat:
+    connection-timeout: 5s
+    keep-alive-timeout: 30s
+spring.lifecycle.timeout-per-shutdown-phase: 20s
+logging.structured.format.console: ecs
