@@ -64,6 +64,12 @@ Documentacion central: [mis-docs](https://github.com/code-corhuila/mis-docs).
 
 ## Claves RSA por ambiente
 
+Las identidades del Worker y relay de Inventario se emiten exclusivamente desde
+Seguridad con `scripts/Issue-EventServiceToken.ps1`. Registro, audiencias, rutas
+y limites: [ADR-EVT-001](docs/ADR-EVT-001-service-identities.md).
+Prueba con claves sinteticas: `./tests/Test-EventIssuer.ps1` en PowerShell 7.
+Este avance no despliega Worker ni cierra HU-EVT-001.
+
 SECURITY_KEYS_PATH es obligatorio, incluso en dev. No tiene fallback: ausente o vacio detiene Compose. El montaje es de solo lectura y create_host_path=false impide crear silenciosamente una carpeta de claves inexistente. Las rutas se resuelven respecto de deploy/compose.yml.
 
 | Archivo local ignorado | Plantilla versionada | Directorio de claves |

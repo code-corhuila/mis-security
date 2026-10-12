@@ -28,3 +28,6 @@ jobs:
           python3 -m pip install --disable-pip-version-check -r tests/requirements.txt
           python3 -m unittest discover -s tests -p 'test_*.py' -v
           python3 tests/check_key_paths.py
+      - name: Verify event service issuer with synthetic keys
+        shell: pwsh
+        run: ./tests/Test-EventIssuer.ps1
